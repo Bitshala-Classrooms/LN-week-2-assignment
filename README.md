@@ -1,14 +1,15 @@
-# Mastering Lightning Network - Week 1: Generating Lightning Invoice
+# Mastering Lightning Network - Week 2: Opening Payment Channels
 
 ## Overview
 
-In this first week you will:
+For the second exercise you will:
 
-1. **Set up** Bitcoin Core and Core Lightning (CLN) nodes using Docker.
-2. **Interact** with both Bitcoin Core and Lightning nodes on `regtest`.
-3. **Fund** a Lightning node and create a BOLT11 invoice.
-4. **Output** a small report file named (`out.txt`) in the **current dicectory** demonstrating you can fund a Lightning node and generate valid invoices.
-5. **Target Locations** for the solution code for each language are given below:
+1. **Set up** Bitcoin Core and two Core Lightning (CLN) nodes (Alice and Bob) using Docker.
+2. **Interact** with Bitcoin Core and both Lightning nodes on `regtest`.
+3. **Connect** Alice and Bob as peers on the Lightning Network.
+4. **Fund** Alice's Lightning node and open a 500,000 satoshi payment channel to Bob.
+5. **Output** a small report file named (`output.txt`) in the **current directory** demonstrating successful peer connection and channel opening.
+6. **Target Locations** for the solution code for each language are given below:
    - Bash: [solution.sh](./bash/solution.sh)
    - JavaScript: [index.js](./javascript/index.js)
    - Python: [main.py](./python/main.py)
@@ -16,9 +17,9 @@ In this first week you will:
 
 ## Problem Statement
 
-Lightning Network is a Layer 2 payment protocol built on top of Bitcoin. Before a Lightning node can send or receive payments, it needs to have on-chain Bitcoin funds and create payment channels. The following exercise introduces us to the basics of setting up and funding a Lightning node. 
+Before Lightning nodes can send or receive payments between each other, they need to establish peer connections and open payment channels. The following exercise introduces us to the basics of setting up multiple Lightning nodes and connecting them through payment channels.
 
-We will be using Docker to set up Bitcoin Core and Core Lightning nodes, after which we fund the Lightning node with `regtest` Bitcoin and generate a BOLT 11 Lightning invoice
+We will be using Docker to set up Bitcoin Core and two Core Lightning nodes (Alice and Bob), after which we will connect them as peers, fund Alice's node with `regtest` Bitcoin, and open a 500,000 satoshi payment channel from Alice to Bob
 
 ## Solution Requirements
 
@@ -26,15 +27,22 @@ You need to write code in any one of `bash`, `javascript`, `python` or `rust` th
 
 ### Setup - Docker Compose
 
-The assignment uses Docker Compose to run both Bitcoin Core and Core Lightning nodes. The configuration is provided in [docker-compose.yml](./docker-compose.yml).
+The assignment uses Docker Compose to run Bitcoin Core and two Core Lightning nodes. The configuration is provided in [docker-compose.yml](./docker-compose.yml).
 
 Services:
 - **bitcoind**: Bitcoin Core node running on regtest
   - RPC port: 18443
   - RPC credentials: alice/password
-- **cln** (ln-node): Core Lightning node
+- **alice**: Core Lightning node (Alice)
   - Connected to bitcoind
   - Network: regtest
+  - P2P port: 9735
+  - REST port: 3010
+- **bob**: Core Lightning node (Bob)
+  - Connected to bitcoind
+  - Network: regtest
+  - P2P port: 9736 (external) → 9735 (internal)
+  - REST port: 3011 (external) → 3010 (internal)
 
 To start the services:
 ```bash
@@ -53,32 +61,48 @@ Each implementation uses helper functions located in the directories.
 
 Your program must:
 
-- Create a new Lightning address
-
-- Create a mining wallet exists and generate a new address from the mining wallet
-- Mine new blocks to this address until you get positive wallet balance. (use `generatetoaddress`) (observe how many blocks it took to get to a positive balance)
-- Write a short comment describing why wallet balance for block rewards behaves that way.
-
-- Fund the Lightning node from the mining wallet and confirm the transaction
-
-- Verify Lightning wallet balance and create a Lightning invoice
+  - Connect Alice and Bob as Peers
+  - Get Alice's and Bob's node IDs
+  - Connect Alice to Bob using Bob's node ID and container address
+  - Create/load a mining wallet and generate a new address from it
+  - Mine new blocks to this address
+  - Create Alice's on-chain address
+  - Send Bitcoin from the mining wallet to Alice
+  - Mine blocks to confirm the transaction
+  - Verify Alice received the funds
+  - Open a 500,000 satoshi payment channel from Alice to Bob
+  - Mine blocks to confirm the channel funding transaction
+  - Wait for the channel to reach `CHANNELD_NORMAL` state
+  - Verify channel state and balances on both Alice and Bob sides
 
 ### Output
 
-Output the following invoice details to `out.txt` in the root directory. Each attribute should be on a new line:
-- Payment hash
-- BOLT11 invoice string
-- Amount in millisatoshis
-- Description
-- Expiry time
+Output the following channel setup details to `out.txt` in the root directory. Each field should be in `key=value` format on a new line:
+- Alice's Lightning node ID (66-character hex string)
+- Bob's Lightning node ID (66-character hex string)
+- Number of peers connected to Alice
+- Number of peers connected to Bob
+- The channel identifier
+- The funding transaction ID (64-character hex string)
+- Alice's view of the channel state (should be `CHANNELD_NORMAL`)
+- Bob's view of the channel state (should be `CHANNELD_NORMAL`)
+- Total channel capacity in millisatoshis
+- Alice's balance in the channel in millisatoshis
+- Bob's balance in the channel in millisatoshis
 
 Sample output file:
 ```
-b47538583f85aaaabceaabf4b4ee7014d12aa11fa2f87cd0d9c7041377ae524d
-lnbcrt500u1p55zy5ksp5m4p9gqetlzseqq8caqqss739tfdxdvw5tfk4t3qqkkaggl6g3mkqpp5k36nskplsk424082406tfmnszngj4ggl5tu8e5xecuzpxaaw2fxsdqhgdhkven9v5s9qcted4jkuaqcqp29qxpqysgqhff9sgvpwyatd7t4merqshgngk9jph5rqzxw95g0kpf0wny7ahajn52fc8wd8tq0jl7w5eazh4qfwnfxdya8t0s4ma54rm2z8j6rjqqqnxqtjx
-50000000
-Coffee Payment
-3600
+0364a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1
+02a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1b3c5d8f2e4a1b3
+1
+1
+abcdef123456789...
+a1b2c3d4e5f6789abcdef0123456789abcdef0123456789abcdef0123456789a
+CHANNELD_NORMAL
+CHANNELD_NORMAL
+500000000
+500000000
+0
 ```
 
 ## Code Structure
@@ -94,7 +118,8 @@ Each language implementation follows a consistent pattern:
 
 Helper functions abstract Docker CLI interactions:
 - `bitcoin_cli(command)`: Execute bitcoin-cli commands via Docker
-- `ln_cli(command)`: Execute lightning-cli commands via Docker
+- `alice_ln_cli(command)`: Execute lightning-cli commands for Alice via Docker
+- `bob_ln_cli(command)`: Execute lightning-cli commands for Bob via Docker
 
 ## Local Testing
 
@@ -122,7 +147,6 @@ Helper functions abstract Docker CLI interactions:
     ```bash
     # check version
     bash --version
-    
     # to install jq [JSON processor to parse JSON responses]
     sudo apt-get update && sudo apt-get install -y jq       # Ubuntu/Debian
     brew install jq                                         # macOS
@@ -135,12 +159,10 @@ Helper functions abstract Docker CLI interactions:
     # check version
     node --version
     npm --version
-    
     # install nvm
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
     nvm install 20
     nvm use 20
-    
     # install project dependencies
     cd javascript
     npm install
@@ -183,7 +205,7 @@ Helper functions abstract Docker CLI interactions:
 
 3. **Start the nodes**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ### Local Testing Steps
@@ -196,9 +218,9 @@ It's a good idea to run the whole test locally to ensure your code is working pr
 
 ### Common Issues
 
-- If docker containers not running ensure `docker-compose up -d` completed successfully
+- If docker containers not running ensure `docker compose up -d` completed successfully
 - Make sure Docker daemon is running and you have permissions using `docker ps`
-- Ensure `out.txt` has exactly 5 lines in the correct order
+- Ensure `out.txt` has exactly 11 lines in the correct order
 - The autograder will run the test script on an Ubuntu 22.04 environment. Make sure your script is compatible with this environment.
 - If you are unable to run the test script locally, you can submit your solution and check the results on the Github.
 
@@ -207,7 +229,7 @@ It's a good idea to run the whole test locally to ensure your code is working pr
 - Commit all code inside the appropriate language directory and the modified `run.sh`.
   ```
   git add .
-  git commit -m "Week 1 solution"
+  git commit -m "Week 2 solution"
   ```
 - Push to the main branch:
   ```

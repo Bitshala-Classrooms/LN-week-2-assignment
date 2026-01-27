@@ -1,6 +1,6 @@
 services:
   bitcoind:
-    image: ruimarinho/bitcoin-core:23
+    image: lncm/bitcoind:v25.0
     container_name: bitcoind
     command:
       - -regtest=1
@@ -19,9 +19,9 @@ services:
     networks:
       - ln-network
 
-  cln:
-    image: elementsproject/lightningd:latest
-    container_name: ln-node
+  alice:
+    image: elementsproject/lightningd:v23.11
+    container_name: alice
     depends_on:
       - bitcoind
     command:
@@ -31,6 +31,7 @@ services:
       - --bitcoin-rpcpassword=password
       - --bitcoin-rpcport=18443
       - --bitcoin-rpcconnect=bitcoind
+      - --addr=0.0.0.0:9735
       - --clnrest-port=3010
       - --clnrest-protocol=http
       - --clnrest-host=0.0.0.0
@@ -38,13 +39,38 @@ services:
       - "9735:9735"
       - "3010:3010"
     volumes:
-      - lightning-data:/root/.lightning
+      - alice-data:/root/.lightning
+    networks:
+      - ln-network
+
+  bob:
+    image: elementsproject/lightningd:v23.11
+    container_name: bob
+    depends_on:
+      - bitcoind
+    command:
+      - --network=regtest
+      - --log-level=debug
+      - --bitcoin-rpcuser=alice
+      - --bitcoin-rpcpassword=password
+      - --bitcoin-rpcport=18443
+      - --bitcoin-rpcconnect=bitcoind
+      - --addr=0.0.0.0:9735
+      - --clnrest-port=3010
+      - --clnrest-protocol=http
+      - --clnrest-host=0.0.0.0
+    ports:
+      - "9736:9735"
+      - "3011:3010"
+    volumes:
+      - bob-data:/root/.lightning
     networks:
       - ln-network
 
 volumes:
   bitcoin-data:
-  lightning-data:
+  alice-data:
+  bob-data:
 
 networks:
   ln-network:

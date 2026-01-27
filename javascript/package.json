@@ -1,7 +1,7 @@
 {
-  "name": "lbtcl-week-1-assignment",
+  "name": "ln-week-2-assignment",
   "version": "1.0.0",
-  "description": "Week 1 assignment for LBTCL",
+  "description": "Week 2 assignment for Mastering LN",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
