@@ -2,9 +2,9 @@ import requests
 import os
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 
-
-def call_cln(method, params=None):
-    rune = os.environ.get('CLN_RUNE')
+def call_alice_ln(method, params=None):
+    """Call Alice's Lightning node via CLN REST API on port 3010"""
+    rune = os.environ.get('ALICE_RUNE')
     url = f'http://localhost:3010/v1/{method}'
     response = requests.post(
         url,
@@ -13,43 +13,67 @@ def call_cln(method, params=None):
     )
     return response.json()
 
+
+def call_bob_ln(method, params=None):
+    """Call Bob's Lightning node via CLN REST API on port 3011"""
+    rune = os.environ.get('BOB_RUNE')
+    url = f'http://localhost:3011/v1/{method}'
+    response = requests.post(
+        url,
+        json=params or {},
+        headers={'Rune': rune}
+    )
+    return response.json()
+
+
 def main():
-
     try:
-        # Get blockchain info
-        rpc = AuthServiceProxy("http://alice:password@localhost:18443")
-        print("Blockchain Info:", rpc.getblockchaininfo())
+        # Bitcoin RPC client
+        bitcoin_rpc = AuthServiceProxy("http://alice:password@localhost:18443")
+        print("Blockchain Info:", bitcoin_rpc.getblockchaininfo())
 
-        # Get Lightning node info
-        ln_info = call_cln('getinfo')
-        print("Lightning Node Info:", ln_info)
+        # Get Alice's node info
+        alice_info = call_alice_ln("getinfo")
+        print("Alice Node Info:", alice_info)
 
-        # Create a new address for funding using lightning-cli and store it in CLN_ADDRESS
+        # Get Bob's node info
+        bob_info = call_bob_ln("getinfo")
+        print("Bob Node Info:", bob_info)
 
-        # Check if wallet exists, if not Create a bitcoin wallet named 'mining_wallet' using bitcoin-cli for mining
+        # Get Alice's node ID
 
-        # Generate a new address and mine blocks to it. How many blocks need to mined? Why?
+        # Get Bob's node ID
 
-        # Fund the Lightning node by sending 0.1 BTC from the mining wallet to CLN_ADDRESS
+        # Connect Alice to Bob as a peer
 
-        # Confirm the funding transaction by mining 6 blocks
+        # Verify peer connection from both Alice's and Bob's perspectives
 
-        # Verify Lightning wallet balance using lightning-cli listfunds
+        # Create or load a mining wallet
 
-        # Create an invoice with parameters and store the invoice string:
-        # - Amount: 50,000 satoshis (50000000 millisatoshis)
-        # - Label: Generate unique label using timestamp (e.g., "invoice_$(date +%s)")
-        # - Description: "Coffee Payment"
-        # - Expiry: 3600 seconds
+        # Generate a new mining address from the mining wallet
 
-        # Decode the invoice string using lightning-cli decodepay and verify the parameters
+        # How many blocks need to be mined to the mining address? Why?
 
-        # Output the invoice details in the specified format to out.txt
-        # - Payment hash
-        # - BOLT11 invoice string
-        # - Amount
-        # - Description
-        # - Expiry time
+        # Verify wallet balance
+
+        # Create an on-chain address for Alice and send 1 BTC from mining wallet to this address
+
+        # Mine blocks to confirm the funding transaction. How many blocks and why?
+
+        # Open a payment channel from Alice to Bob with 500,000 satoshis capacity
+
+        # Mine some blocks to confirm the channel opening transaction.
+
+        # Wait a few seconds for nodes to recognize the confirmed channel
+
+        # Verify channel is active on both Alice's side and Bob's side
+
+        # Get channel details from both Alice's and Bob's perspectives
+
+        # Check if Alice and Bob are peers
+
+        # Write to out.txt
+
     except JSONRPCException as e:
         print("An error occurred", e)
 
