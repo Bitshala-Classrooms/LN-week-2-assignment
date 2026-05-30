@@ -1,4 +1,4 @@
-# Mastering Lightning Network - Week 2: Opening Payment Channels
+# Mastering Lightning Network - Exercise 2: Opening Payment Channels
 
 ## Overview
 
